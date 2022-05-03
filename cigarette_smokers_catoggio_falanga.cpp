@@ -56,7 +56,11 @@ int main( int argc, char *argv[] )  {
     pthread_create(&a3, NULL, agenteC, NULL);
     pthread_create(&s1, NULL, fumatore1, NULL);
     pthread_create(&s2, NULL, fumatore2, NULL);
-    
+    pthread_create(&s3, NULL, fumatore3, NULL);
+    pthread_create(&p1, NULL, pusherA, NULL);
+    pthread_create(&p2, NULL, pusherB, NULL);
+    pthread_create(&p3, NULL, pusherC, NULL);
+
 	 while(true){}
 
 }
@@ -127,3 +131,86 @@ void *fumatore2(void *b){
 	}
 }
 
+void *fumatore3(void *c){
+	while(true){
+		pthread_mutex_lock(&stampa);
+		printf("Fumatore 3 ha bisogno dei fiammiferi\n");
+		pthread_mutex_unlock(&stampa);
+
+		sem_wait(&fiammiferi);
+		pthread_mutex_lock(&stampa);
+		printf("Fumatore 3 prende i fiammiferi, fuma\n");
+		pthread_mutex_unlock(&stampa);
+		sem_post(&semaforoAgente);
+
+		pthread_mutex_lock(&stampa);
+		printf("Fumatore 3 lascia l'accendino'\n" );
+		pthread_mutex_unlock(&stampa);
+
+		sleep(4);
+	}
+}
+
+void *pusherA(void *a){
+	while(true){
+			sem_wait(&semaforoTabacco);
+			pthread_mutex_lock(&stampa);
+			printf("Il tabacco e' sul tavolo.\n");
+			pthread_mutex_unlock(&stampa);
+
+			sem_wait(&semaforoMutex);
+				if(cartaLibera){
+					cartaLibera = false;
+					sem_post(&carta);
+				}else if(fiammiferiLiberi){
+					fiammiferiLiberi = false;
+					sem_post(&fiammiferi);
+				}else{
+					tabaccoLibero = true;
+				}
+			sem_post(&semaforoMutex);
+	}
+}
+
+
+void *pusherB(void *b){
+	while(true){
+		sem_wait(&semaforoFiammiferi);
+		pthread_mutex_lock(&stampa);
+		printf("I fiammiferi sono sul tavolo.\n");
+		pthread_mutex_unlock(&stampa);
+
+		sem_wait(&semaforoMutex);
+			if(cartaLibera){
+				cartaLibera = false;
+				sem_post(&fiammiferi);
+			}else if(tabaccoLibero){
+				tabaccoLibero = false;
+				sem_post(&tabacco);
+			}else{
+				fiammiferiLiberi = true;
+			}
+		sem_post(&semaforoMutex);
+	}
+}
+
+void *pusherC(void *c){
+	while(true){
+		sem_wait(&semaforoCarta);
+		pthread_mutex_lock(&stampa);
+		printf("La carta e' sul tavolo'.\n");
+		pthread_mutex_unlock(&stampa);
+
+		sem_wait(&semaforoMutex);
+			if(tabaccoLibero){
+				tabaccoLibero = false;
+				sem_post(&tabacco);
+			}else if(fiammiferiLiberi){
+				fiammiferiLiberi = false;
+				sem_post(&fiammiferi);
+			}else{
+				cartaLibera = true;
+			}
+		sem_post(&semaforoMutex);
+	}
+}
